@@ -42,14 +42,13 @@ def print_method_summary(doc, proto_contents, methods):
   last_group = ''
   for group in proto_contents['group-ordering']:
     for method in sorted(methods, key=lambda k: (k['group'], k['name'])):
-      if (group.lower() == method['group'].lower() and
-          not method['group'] == last_group):
-        if not method['group'] == last_group:
-          doc.write('* [' + method['group'] + ']' +
-                    '(#' + method['group'].replace(' ', '-').lower() + ')\n')
-          last_group = method['group']
+      if (group.lower() == method['group'].lower()
+          and method['group'] != last_group):
+        doc.write('* [' + method['group'] + ']' +
+                  '(#' + method['group'].replace(' ', '-').lower() + ')\n')
+        last_group = method['group']
   doc.write('\n\n')
-    
+
   doc.write('The following table lists the methods in each group and links ' +
             'to more detail about each method:\n\n')
   doc.write('<table id="api-method-summary">\n')
@@ -57,12 +56,10 @@ def print_method_summary(doc, proto_contents, methods):
   last_group = ''
   for group in proto_contents['group-ordering']:
     for method in sorted(methods, key=lambda k: (k['group'], k['name'])):
-      if (group.lower() == method['group'].lower() and
-          not method['group'] == last_group):
-        print_method_summary_group_row(doc, method['group'])
-        last_group = method['group']
-        print_method_summary_row(doc, method)
-      elif group.lower() == method['group'].lower():
+      if group.lower() == method['group'].lower():
+        if method['group'] != last_group:
+          print_method_summary_group_row(doc, method['group'])
+          last_group = method['group']
         print_method_summary_row(doc, method)
   doc.write('</table>\n')
 
@@ -127,7 +124,7 @@ def recursively_add_objects(new_objects, method_file, obj,
               op_enum_file in proto_contents and
               'enums' in proto_contents[op_enum_file] and
               type_list[1] in proto_contents[op_enum_file]['enums']):
-          if not op_enum_file in new_objects['enums']:
+          if op_enum_file not in new_objects['enums']:
             new_objects['enums'][op_enum_file] = {}
           new_objects['enums'][op_enum_file][type_list[1]] = (
               proto_contents[op_enum_file]['enums'][type_list[1]])
@@ -138,14 +135,10 @@ def print_method_details(doc, proto_contents, proto, methods, objects):
   last_group = ''
   for group in proto_contents['group-ordering']:
     for method in sorted(methods, key=lambda k: (k['group'], k['name'])):
-      if (group.lower() == method['group'].lower() and
-          not method['group'] == last_group):
-        doc.write('##' + method['group'] + '\n')
-        last_group = method['group']
-        print_method_detail_header(doc, method)
-        print_method_detail_request(doc, proto_contents, proto, method)
-        print_method_detail_response(doc, proto_contents, proto, method)
-      elif group.lower() == method['group'].lower():
+      if group.lower() == method['group'].lower():
+        if method['group'] != last_group:
+          doc.write('##' + method['group'] + '\n')
+          last_group = method['group']
         print_method_detail_header(doc, method)
         print_method_detail_request(doc, proto_contents, proto, method)
         print_method_detail_response(doc, proto_contents, proto, method)
@@ -177,9 +170,9 @@ def print_method_details(doc, proto_contents, proto, methods, objects):
             op_enum_file in proto_contents and
             'enums' in proto_contents[op_enum_file] and
             type_list[1] in proto_contents[op_enum_file]['enums']):
-        if not op_enum_file in new_objects:
+        if op_enum_file not in new_objects:
           new_objects[op_enum_file] = {'enums':{}}
-        elif not 'enums' in new_objects[op_enum_file]:
+        elif 'enums' not in new_objects[op_enum_file]:
           new_objects[op_enum_file]['enums'] = {}
         new_objects[op_enum_file]['enums'][type_list[1]] = (
             proto_contents[op_enum_file]['enums'][type_list[1]])
@@ -194,7 +187,7 @@ def print_nested_objects(doc, objects, proto_contents):
       print_proto_enums(doc, proto_contents, obj, objects,
                         {'strip-proto-name': 1})
   for obj in sorted(objects):
-    if not obj == 'vtgate.proto':
+    if obj != 'vtgate.proto':
       print_proto_enums(doc, proto_contents, obj, objects, {})
   doc.write('## Messages\n\n')
   for obj in sorted(objects):
@@ -202,24 +195,20 @@ def print_nested_objects(doc, objects, proto_contents):
       print_proto_messages(doc, proto_contents, obj, objects,
                            {'strip-proto-name': 1})
   for obj in sorted(objects):
-    if not obj == 'vtgate.proto':
+    if obj != 'vtgate.proto':
       print_proto_messages(doc, proto_contents, obj, objects, {})
 
 def print_message_detail_header(doc, proto, message_details, message_name,
                                 options):
-  header_size = '###'
-  if 'header-size' in options:
-    header_size = options['header-size']
-
+  header_size = options['header-size'] if 'header-size' in options else '###'
   message = (proto.replace('.proto', '').replace('.pb.go', '') +
              '.' + message_name)
-  if (options and
-      'strip-proto-name' in options and
-      options['strip-proto-name']):
-    message = message_name
-  elif options and 'add-method-name' in options and 'method-name' in options:
-    message = options['method-name'] + '.' + message_name
-  doc.write(header_size + ' ' + message + '\n\n')
+  if options:
+    if 'strip-proto-name' in options and options['strip-proto-name']:
+      message = message_name
+    elif 'add-method-name' in options and 'method-name' in options:
+      message = options['method-name'] + '.' + message_name
+  doc.write(f'{header_size} {message}' + '\n\n')
 
   if 'comment' in message_details and message_details['comment']:
     doc.write(message_details['comment'].strip() + '\n\n')
@@ -231,13 +220,13 @@ def print_method_detail_header(doc, method):
 
 def print_properties_header(doc, header, table_headers):
   if header:
-    doc.write('##### ' + header + '\n\n')
+    doc.write(f'##### {header}' + '\n\n')
   if table_headers:
     doc.write('| ')
     for field in table_headers:
-      doc.write(field + ' |')
+      doc.write(f'{field} |')
     doc.write('\n')
-    for field in table_headers:
+    for _ in table_headers:
       doc.write('| :-------- ')
     doc.write('\n')
 
@@ -246,20 +235,15 @@ def print_property_row(doc, proto_contents, proto, method_file, method, prop):
   if 'name' in prop:
     doc.write('| <code>' + prop['name'] + '</code> ')
 
-  method_in_messages = False
-  enum_in_messages = False
-  for key in proto_contents[proto]['messages']:
-    if key == method:
-      method_in_messages = True
-  for key in proto_contents[proto]['enums']:
-    if key == prop['type']:
-      enum_in_messages = True
-
+  method_in_messages = any(key == method
+                           for key in proto_contents[proto]['messages'])
+  enum_in_messages = any(key == prop['type']
+                         for key in proto_contents[proto]['enums'])
   # Print property/parameter type
   if 'type' in prop and prop['type']:
     doc.write('<br>')
     prop_text = ''
-    if prop['type'][0:5] == 'map <':
+    if prop['type'][:5] == 'map <':
       map_value = prop['type'].split(',')[1].split('>')[0].strip()
       if (map_value and
           map_value in proto_contents[proto]['messages']):
@@ -323,7 +307,7 @@ def print_property_row(doc, proto_contents, proto, method_file, method, prop):
                                prop['type'].lower() + ')')
 
     if 'status' in prop and prop['status'] == 'repeated':
-      prop_text = 'list &lt;' + prop_text + '&gt;'
+      prop_text = f'list &lt;{prop_text}&gt;'
     doc.write(prop_text)
 
   # Print property/parameter definition.
@@ -361,19 +345,15 @@ def print_property_row(doc, proto_contents, proto, method_file, method, prop):
 
 def get_op_item(proto_contents, item, item_type):
   item_list = item.split('.')
-  if len(item_list) == 2:
-    item_file = item_list[0] + '.proto'
-    item_enum = item_list[1]
-    if item_file in proto_contents:
-      if item_type in proto_contents[item_file]:
-        if item_enum in proto_contents[item_file][item_type]:
-          return item_file, proto_contents[item_file][item_type][item_enum]
-        else:
-          return [None, None]
-      else:
-        return [None, None]
-    else:
-      return [None, None]
+  if len(item_list) != 2:
+    return [None, None]
+  item_file = f'{item_list[0]}.proto'
+  item_enum = item_list[1]
+  if item_file in proto_contents:
+    return ((item_file, proto_contents[item_file][item_type][item_enum])
+            if item_type in proto_contents[item_file]
+            and item_enum in proto_contents[item_file][item_type] else
+            [None, None])
   else:
     return [None, None]
 
@@ -429,19 +409,16 @@ def print_proto_file_definition(doc, proto_contents, proto):
     doc.write(proto_contents[proto]['file_definition'].strip() + '\n\n')
 
 def print_proto_enum(doc, enum_details, enum_name, proto, options):
-  header_size = '###'
-  if 'header-size' in options:
-    header_size = options['header-size']
+  header_size = options['header-size'] if 'header-size' in options else '###'
   # Print name of enum as header
   enum_header = proto.replace('.proto', '') + '.' + enum_name
-  if options and 'add-method-name' in options and 'method-name' in options:
-    enum_header = options['method-name'] + '.' + enum_name
-  elif (options and
-        'strip-proto-name' in options and
-        options['strip-proto-name']):
-    enum_header = enum_name
+  if options:
+    if 'add-method-name' in options and 'method-name' in options:
+      enum_header = options['method-name'] + '.' + enum_name
+    elif 'strip-proto-name' in options and options['strip-proto-name']:
+      enum_header = enum_name
 
-  doc.write(header_size + ' ' + enum_header + '\n\n')
+  doc.write(f'{header_size} {enum_header}' + '\n\n')
 
   if 'comment' in enum_details and enum_details['comment']:
     doc.write(enum_details['comment'] + '\n\n')
@@ -524,11 +501,10 @@ def print_proto_enums(doc, proto_contents, proto, objects_to_print, options):
 def create_reference_doc(proto_directory, doc_directory, proto_contents,
                          addl_types):
   for proto in proto_contents:
-    if 'service' in proto_contents[proto]:
-      if (proto_contents[proto]['service']['name'] and
-          proto_contents[proto]['service']['name'] == 'Vitess'):
-        doc = open(doc_directory + 'VitessApi.md', 'w')
-
+    if 'service' in proto_contents[proto] and (
+        proto_contents[proto]['service']['name']
+        and proto_contents[proto]['service']['name'] == 'Vitess'):
+      with open(f'{doc_directory}VitessApi.md', 'w') as doc:
         #if proto_contents[proto]['file_definition']:
         #  print_api_summary(doc, proto_contents[proto]['file_definition'])
 
@@ -540,12 +516,11 @@ def create_reference_doc(proto_directory, doc_directory, proto_contents,
           print_method_details(doc, proto_contents, proto,
                                proto_contents[proto]['service']['methods'],
                                addl_types)
-        doc.close()
   return
 
 def parse_method_details(line):
-  details = re.findall(r'rpc ([^\(]+)\(([^\)]+)\) returns \(([^\)]+)', line)
-  if details:
+  if details := re.findall(r'rpc ([^\(]+)\(([^\)]+)\) returns \(([^\)]+)',
+                           line):
     return {'name': details[0][0],
             'request': details[0][1],
             'response': details[0][2]}
@@ -574,8 +549,8 @@ def build_property_type_list(types, proto_contents, method):
   if op_method and 'properties' in op_method:
     for prop in op_method['properties']:
       if 'map' in prop['type']:
-        map_fields = re.findall(r'map\s*<([^\,]+)\,\s*([^\>]+)', prop['type'])
-        if map_fields:
+        if map_fields := re.findall(r'map\s*<([^\,]+)\,\s*([^\>]+)',
+                                    prop['type']):
           for x in range(0,2):
             if '.' in map_fields[0][x]:
               types.append(map_fields[0][x])

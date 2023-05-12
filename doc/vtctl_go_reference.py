@@ -47,7 +47,7 @@ def write_header(doc, commands):
             'following groups:\n\n')
   for group in sorted(commands):
     group_link = anchor_id(group)
-    doc.write('* [' + group + '](#' + group_link + ')\n')
+    doc.write(f'* [{group}](#{group_link}' + ')\n')
   doc.write('\n\n')
 
 def write_footer(doc):
@@ -264,9 +264,8 @@ def parse_arg_list(arguments, current_command):
 
   new_arg_list = []
   arg_count = 0
-  char_count = 1
-  for char in arguments:
-    if (last_char == '' or last_char == ' ') and char == '[':
+  for char_count, char in enumerate(arguments, start=1):
+    if last_char in ['', ' '] and char == '[':
       find_closing_square_bracket =  True
     elif (last_char == '[' and
           find_closing_square_bracket and
@@ -292,7 +291,7 @@ def parse_arg_list(arguments, current_command):
           has_multiple = True
         elif not has_comma:
           current_argument += char
-    elif char == '<' and (last_char == '' or last_char == ' '):
+    elif char == '<' and last_char in ['', ' ']:
       is_required_argument = True
       current_argument += char
     elif char == ',':
@@ -311,11 +310,10 @@ def parse_arg_list(arguments, current_command):
           current_argument = ''
         else:
           next_char = 'x'
-          if current_command == 'Resolve':
-            if char_count < len(arguments[0]):
-              next_char = arguments[0][char_count:char_count + 1]
+          if current_command == 'Resolve' and char_count < len(arguments[0]):
+            next_char = arguments[0][char_count:char_count + 1]
 
-          if next_char and not next_char == '.' and not next_char == ':':
+          if next_char and next_char != '.' and next_char != ':':
             new_arg_list.append({'name': current_argument,
                                  'required': True})
             arg_count += 1
@@ -333,15 +331,12 @@ def parse_arg_list(arguments, current_command):
           char == '.'):
       new_arg_list[arg_count - 1]['multiple'] = True
 
-    char_count += 1
     last_char = char
   return new_arg_list
 
 def get_group_name_from_variable(file_path, variable_name):
-  vtctl_go_file = open(file_path, 'rU')
-  vtctl_go_data = vtctl_go_file.readlines()
-  vtctl_go_file.close()
-
+  with open(file_path, 'rU') as vtctl_go_file:
+    vtctl_go_data = vtctl_go_file.readlines()
   for line in vtctl_go_data:
     regex = r'const\s*' + re.escape(variable_name) + r'\s*=\s*\"([^\"]+)\"'
     if re.search(regex, line):
